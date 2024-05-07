@@ -174,7 +174,7 @@ if __name__ == "__main__":
         print('Программа завершена!')
         os.abort()
     print('Вводились ли ранее файлы rooms.json и students.json?\nPrint(Y/n)')
-    enter='Y'
+    enter='n'
     while True:
         if(enter=='Y'):
             break
