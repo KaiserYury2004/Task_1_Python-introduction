@@ -1,80 +1,116 @@
-import pyodbc
 import json
-import logging 
+import logging
 from lxml import etree
 import os
 import psycopg2
 import configparser
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
 class MyDatabase:
-    #Здесь ищу сервер
-    def __init__(self, port ,server, database, username, password):
-            self.port=port
-            self.server =server
-            self.database = database
-            self.username = username
-            self.password = password
-            try:
-                self.cursor, self.connection = self.connect()
-                print('cursor were created')
-            except:
-                logger.critical("Ошибка при подключении к серверу базы данных")
-    #Здесь конекчусь
-    def connect(self):
+    """
+    Class to interact with a PostgreSQL database.
+
+    Attributes:
+        port (str): Port number.
+        server (str): Server name.
+        database (str): Database name.
+        username (str): Username.
+        password (str): Password.
+        cursor: Cursor object for executing SQL commands.
+        connection: Connection object for the database connection.
+    """
+
+    def __init__(self, port, server, database, username, password):
+        """
+        Initialize the database connection.
+
+        Args:
+            port (str): Port number.
+            server (str): Server name.
+            database (str): Database name.
+            username (str): Username.
+            password (str): Password.
+        """
+        self.port = port
+        self.server = server
+        self.database = database
+        self.username = username
+        self.password = password
         try:
-            #conn_str = f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={self.server};DATABASE={self.database};PORT={self.port};UID={self.username};PWD={self.password};'
-            #conn = pyodbc.connect(conn_str)
+            self.cursor, self.connection = self.connect()
+            print('cursor were created')
+        except:
+            logger.critical("Ошибка при подключении к серверу базы данных")
+
+    def connect(self):
+        """
+        Connect to the database.
+
+        Returns:
+            cursor: Cursor object for executing SQL commands.
+            connection: Connection object for the database connection.
+        """
+        try:
             connection = psycopg2.connect(
-            host='postgres',
-            database='test',
-            user='sa',
-            password=18011871,
-            port=5432
+                host='postgres',
+                database='test',
+                user='sa',
+                password=18011871,
+                port=5432
             )
             logger.info("Успешное подключение к базе данных")
             cursor = connection.cursor()
             return cursor, connection
         except Exception as e:
             global connected
-            connected=False
+            connected = False
             logger.critical(f"Ошибка при подключении к базе данных: {e}")
         return None
-    
-    #Здесь создаю при необходимости таблицу
+
     def create_tables(self):
+        """Create necessary tables if they don't exist."""
         cursor = self.cursor
         cursor.execute("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'rooms'")
         if cursor.fetchone()[0] == 0:
-             cursor.execute('''CREATE TABLE rooms
-                        (id INT PRIMARY KEY,
-                        name VARCHAR(255))''')
+            cursor.execute('''CREATE TABLE rooms
+                            (id INT PRIMARY KEY,
+                            name VARCHAR(255))''')
         else:
             logger.info('Таблица "rooms" уже существует!')
         cursor.execute("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'students'")
         if cursor.fetchone()[0] == 0:
             cursor.execute('''CREATE TABLE students
-                        (id INT PRIMARY KEY,
-                        name VARCHAR(255),
-                        birthday timestamp,
-                        room INT,
-                        sex CHAR(1),
-                        FOREIGN KEY(room) REFERENCES rooms(id))''')
+                            (id INT PRIMARY KEY,
+                            name VARCHAR(255),
+                            birthday timestamp,
+                            room INT,
+                            sex CHAR(1),
+                            FOREIGN KEY(room) REFERENCES rooms(id))''')
             logger.info('Таблица Students создана!')
         else:
             print('Таблицы "Students" already exists!')
         self.connection.commit()
 
-    
-    #Здесь выгружается инфа из файлов!     
-    def load_data_from_json(self, rooms_file, students_file)->int:
-        check_wrong_ways=0
+    def load_data_from_json(self, rooms_file, students_file) -> int:
+        """
+        Load data from JSON files into the database.
+
+        Args:
+            rooms_file (str): Path to the JSON file containing rooms data.
+            students_file (str): Path to the JSON file containing students data.
+
+        Returns:
+            int: 0 if data loaded successfully, 1 if any file is not found.
+        """
+        check_wrong_ways = 0
         if not os.path.isfile(rooms_file):
             logger.error(f"Файл '{rooms_file}' не найден.")
-            check_wrong_ways=1
+            check_wrong_ways = 1
         if not os.path.isfile(students_file):
             logger.error(f"Файл '{students_file}' не найден.")
-            check_wrong_ways=1
+            check_wrong_ways = 1
         if check_wrong_ways == 1:
             return check_wrong_ways
         cursor = self.cursor
@@ -92,26 +128,39 @@ class MyDatabase:
                     birthday = student['birthday'][:10]
                     cursor.execute("INSERT INTO Students (id, name, birthday, room, sex) VALUES (%s, '%s', '%s', '%s', '%s')" % (student['id'], student['name'], birthday, student['room'], student['sex']))
                 logger.info('Данные по студентам занесены!')
-        except pyodbc.Error as e:
+        except psycopg2.Error as e:
             logger.critical(f"Ошибка при заносе данных в базу данных: {e}")
         self.connection.commit()
-    
 
     def execute_sql_query_json(self,input_file,output_file):
-        cursor = self.connect()
+        """
+        Execute SQL queries from input file and save results to output file in JSON format.
+
+        Args:
+            input_file (str): Path to the file containing SQL queries.
+            output_file (str): Path to the output JSON file.
+        """
+        cursor = self.cursor
         with open(input_file, 'r') as f:
             queries = f.read()
-        with open(output_file, 'w') as f:
-                try:
-                    cursor.execute(queries)
-                    rows = cursor.fetchall()
+            try:
+                cursor.execute(queries)
+                rows = cursor.fetchall()
+                with open(output_file, 'w') as f:
                     f.write(f"Result of {input_file}: \n")
                     for row in rows:
                         f.write(str(row) + '\n')
-                except pyodbc.Error as e:
-                    logger.critical(f"Ошибка выполнения запроса: {output_file}\n{e}\n\n")
+            except (psycopg2.Error, FileNotFoundError) as e:
+                logger.critical(f"Ошибка выполнения запроса: {output_file}\n{e}\n\n")
 
     def query_processing(self, input_file, output_file):
+        """
+        Execute SQL queries from input file, process results, and save to output file in XML format.
+
+        Args:
+            input_file (str): Path to the file containing SQL queries.
+            output_file (str): Path to the output XML file.
+        """
         try:
             with open(input_file, 'r') as f:
                 sql_query = f.read()
@@ -125,10 +174,20 @@ class MyDatabase:
                 logger.info('Создан файл '+output_file)
             else:
                 logger.critical("Не удалось выполнить запрос или получить результаты.")
-        except pyodbc.Error as e:
+        except psycopg2.Error as e:
             print(f"Ошибка при выполнении SQL запроса: {e}")
 
     def convert_result_to_xml(self, columns, rows):
+        """
+        Convert SQL query result to XML format.
+
+        Args:
+            columns (list): List of column names.
+            rows (list): List of tuples representing rows from the SQL query result.
+
+        Returns:
+            etree.Element: XML data.
+        """
         root = etree.Element('data')
         for row in rows:
             record = etree.Element('record')
@@ -141,27 +200,24 @@ class MyDatabase:
         return root
 
     def save_xml_to_file(self, xml_data, xml_filename):
+        """
+        Save XML data to a file.
+
+        Args:
+            xml_data (etree.Element): XML data to be saved.
+            xml_filename (str): Path to the output XML file.
+        """
         xml_tree = etree.ElementTree(xml_data)
         xml_tree.write(xml_filename, pretty_print=True)
 
     def close(self):
-         logger.info("Programm is finished!")
-         self.connection.close()
-         self.cursor.close()
-         
-
-
+        """Close the database connection."""
+        logger.info("Programm is finished!")
+        self.connection.close()
+        self.cursor.close()
 
 
 if __name__ == "__main__":
-    # print('Введите имя сервера')
-    # server=input()
-    # print('Введите имя базы данных')
-    # database=input()
-    # print('Введите имя пользователя')
-    # username=input()
-    # print('Введите имя пользователя')
-    # password=input()
     config = configparser.ConfigParser()
     config.read("config.ini")
     port=config.get('Task_1','Port')
@@ -174,7 +230,7 @@ if __name__ == "__main__":
         print('Программа завершена!')
         os.abort()
     print('Вводились ли ранее файлы rooms.json и students.json?\nPrint(Y/n)')
-    enter='n'
+    enter='Y'
     while True:
         if(enter=='Y'):
             break
