@@ -1,1 +1,1 @@
-*.ini
+git rm --cached config.ini
