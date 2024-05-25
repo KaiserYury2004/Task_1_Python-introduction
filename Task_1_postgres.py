@@ -54,11 +54,11 @@ class MyDatabase:
         """
         try:
             connection = psycopg2.connect(
-                host='postgres',
-                database='test',
-                user='sa',
-                password=18011871,
-                port=5432
+                host=self.server,
+                database=self.database,
+                user=self.username,
+                password=self.password,
+                port=self.port
             )
             logger.info("Успешное подключение к базе данных")
             cursor = connection.cursor()
