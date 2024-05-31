@@ -5,11 +5,7 @@ from Task_1 import config
 #поэтому здесь будут выброшены ошибки по причине отсутствия на локальной машине данного сервера!
 class TestMyDatabase(unittest.TestCase):
     def setUp(self):
-        self.db = MyDatabase(server=config.get('Task_1','Server'),
-                             port=config.get('Task_1','Port'), 
-                             database= config.get('Task_1','Database'),
-                             username=config.get('Task_1','Username'), 
-                             password=config.get('Task_1','Password'))
+        self.db = MyDatabase(server=config.get('Task_1','Server'),port=config.get('Task_1','Port'),database= config.get('Task_1','Database'),username=config.get('Task_1','Username'), password=config.get('Task_1','Password'))
     def tearDown(self):
         self.db.close()
     def test_connection(self):
