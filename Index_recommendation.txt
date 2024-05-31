@@ -10,6 +10,6 @@
 
 --Создание индексов SQL
 
-CREATE INDEX idx_rooms_id ON rooms(id)
+CREATE INDEX index_rooms_id ON rooms(id)
 
-CREATE INDEX idx_students_room ON students(room)
+CREATE INDEX index_students_room ON students(room)
