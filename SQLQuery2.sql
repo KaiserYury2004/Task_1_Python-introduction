@@ -1,7 +1,6 @@
-#Для postgres
-SELECT rooms.name, AVG(EXTRACT(year FROM AGE(CURRENT_DATE, students.birthday))) AS Average_Age
-FROM rooms
-JOIN students ON rooms.id = students.room
-GROUP BY rooms.name
+SELECT r.name, AVG(EXTRACT(year FROM AGE(CURRENT_DATE, s.birthday))) AS Average_Age
+FROM rooms r
+JOIN students s ON r.id = s.room
+GROUP BY r.name
 ORDER BY Average_Age
 LIMIT 5;
