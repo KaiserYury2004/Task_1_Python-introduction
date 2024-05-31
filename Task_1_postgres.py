@@ -4,10 +4,8 @@ from lxml import etree
 import os
 import psycopg2
 import configparser
-
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-
+logging.basicConfig(level=logging.INFO,filename='database.log')
 class MyDatabase:
     """
     Class to interact with a PostgreSQL database.
@@ -68,7 +66,6 @@ class MyDatabase:
             connected = False
             logger.critical(f"Ошибка при подключении к базе данных: {e}")
         return None
-
     def create_tables(self):
         """Create necessary tables if they don't exist."""
         cursor = self.cursor
@@ -220,36 +217,37 @@ class MyDatabase:
 if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read("config.ini")
-    port=config.get('Task_1','Port')
-    server = config.get('Task_1','Server')
-    database = config.get('Task_1','Database')
-    username = config.get('Task_1','Username')
-    password = config.get('Task_1','Password')
-    db = MyDatabase(port,server, database, username, password)
+    os.environ['PORT']=config["Task_1"]["Port"]
+    os.environ['Server']=config["Task_1"]["Server"]
+    os.environ['Database']=config["Task_1"]["Database"]
+    os.environ['Username']=config["Task_1"]["Username"]
+    os.environ['Password']=config["Task_1"]["Password"] 
+    print()   
+    db = MyDatabase(os.environ['PORT'],os.environ['Server'], os.environ['Database'], os.environ['Username'], os.environ['Password'])
     if(connected is False):
         print('Программа завершена!')
         os.abort()
     print('Вводились ли ранее файлы rooms.json и students.json?\nPrint(Y/n)')
-    enter='Y'
+    enter=input()
     while True:
         if(enter=='Y'):
             break
         elif(enter=='n'):
             db.create_tables()
             print('Введите полный путь до файла rooms.json')
-            rooms_way='./rooms.json'
+            rooms_way=input()
             print('Введите путь до файла students.json')
             students_way='./students.json'
             while db.load_data_from_json(rooms_way,students_way) == 1:
                 print('Введите корректный путь до файла rooms.json')
-                rooms_way='./rooms.json'
+                rooms_way=input()
                 print('Введите корректный путь до файла students.json')
-                students_way='./students.json'
+                students_way=input()
                 db.load_data_from_json(rooms_way,students_way)
             break
         print('Введите один из предложенных вариантов')
     print('Выберите формат выходного файла:json или xml')
-    form='json'
+    form=input()
     while True:
         if form.find('json')!=-1:
             form='json'
@@ -266,5 +264,5 @@ if __name__ == "__main__":
             db.query_processing('SQLQuery4.sql','SQLQuery4_result.'+str(form))
             break
         print('Введите один из двух предложенных форматов!')
-        form='json'
+        form=input()
     db.close()

@@ -1,4 +1,3 @@
-#Для postgres и MSSMS
-SELECT rooms.name, COUNT(students.id) 
-FROM rooms LEFT JOIN students ON rooms.id = students.room 
-GROUP BY rooms.name
+SELECT r.name, COUNT(s.room) 
+FROM rooms r LEFT JOIN students s ON r.id = s.room 
+GROUP BY r.name
